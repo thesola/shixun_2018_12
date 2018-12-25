@@ -40,6 +40,10 @@ private slots:
 
     void on_pb_BoundPath_clicked();
 
+    void setStatus(QString status);
+
+    int combine(int nr, int n);
+
 private:
     Ui::Widget *ui;
 
