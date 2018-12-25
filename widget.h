@@ -38,11 +38,15 @@ public:
 private slots:
     void on_pb_DataPath_clicked();
 
+    void on_pb_BoundPath_clicked();
+
 private:
     Ui::Widget *ui;
 
     QString m_strDataPath;
+    QString m_strBoundPath;
     double m_DataTable[ g_nr_m ][ g_nr_n ];
+    double m_BoundTable[2][ g_nr_n ]; // 边界值 table[0] 为上界 table[1]为下界
 };
 
 #endif // WIDGET_H
