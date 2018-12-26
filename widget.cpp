@@ -244,7 +244,6 @@ void Widget::cal7()
     t4_fm *= 1U<<4; // 乘以2的4次幂
     double t4_rate = t4_fz/(double)t4_fm;
 
-
 #define magic(n)  do\
                     {\
                         ui->lb_cal7_t##n##_nr_fz->setText(QString::number(t##n##_fz));\
@@ -258,7 +257,6 @@ void Widget::cal7()
 
 #undef magic
 
-
     setStatus(" 组合密集 覆盖率计算完毕");
 }
 
@@ -268,7 +266,71 @@ void Widget::cal8()
 {
     setStatus("正在计算 Sign-sign 覆盖率");
 
+    /*
+     * 总神经元对数： g_nr_l1 * g_nr_l2 + g_nr_l2 * g_nr_l3
+     * 符合条件的神经元对：遍历所有神经元对，遍历所有输入组合
+     *
+     * 预处理：
+     * 		将输入数据转为 -1/1 数组： -1: 原值<=0		1:原值>0
+    */
 
+    // 预处理
+    for(int i=0; i<g_nr_m; i++)
+    {
+        for(int j=0; j<g_nr_n; j++)
+        {
+            m_DataRegTable[i][j] = ( m_DataTable[i][j] > 0 ? 1 : -1 );
+        }
+    }
+
+    int fz = 0;
+    int fm = g_nr_l1 * g_nr_l2 + g_nr_l2 * g_nr_l3;
+
+#define magic(beg1,end1,beg2,end2) do\
+                                    {\
+                                        for(int i=(beg1); i<(end1); i++)\
+                                        {\
+                                            for(int j=(beg2); j<(end2); j++)\
+                                            {\
+                                                /* 判断神经元对(i,j)是否符合条件 i:条件神经元 j:决策神经元*/ \
+                                                for(int x1=0; x1<g_nr_m; x1++)\
+                                                {\
+                                                    for(int x2=x1+1;x2<g_nr_m;x2++)\
+                                                    {\
+                                                        if(m_DataRegTable[x1][i] + m_DataRegTable[x2][i] != 0)\
+                                                        {\
+                                                            continue;\
+                                                        }\
+                                                        if(m_DataRegTable[x1][j] + m_DataRegTable[x2][j] != 0)\
+                                                        {\
+                                                            continue;\
+                                                        }\
+                                                        int k;\
+                                                        for(k=(beg1); k<(end1); k++)\
+                                                        {\
+                                                            if( k != i )\
+                                                            {\
+                                                                if( m_DataRegTable[x1][k] + m_DataRegTable[x2][k] == 0 )\
+                                                                {\
+                                                                    break;\
+                                                                }\
+                                                            }\
+                                                        }\
+                                                        fz += ( k == (end1) );\
+                                                    }\
+                                                }\
+                                            }\
+                                        }\
+                                    }while(0);
+
+    magic( 0, g_nr_l1, g_nr_l1, g_nr_l1+g_nr_l2 );
+    magic( g_nr_l1, g_nr_l1+g_nr_l2, g_nr_l1+g_nr_l2, g_nr_n );
+
+#undef magic
+
+    ui->lb_cal8_fz->setText(QString::number(fz));
+    ui->lb_cal8_fm->setText(QString::number(fm));
+    ui->lb_cal8_rate->setText(QString::number(fz/(double)fm));
 
     setStatus(" Sign-sign 覆盖率计算完毕");
 }
@@ -279,7 +341,62 @@ void Widget::cal9()
 {
     setStatus("正在计算 Distance-sign 覆盖率");
 
+    /* 规则8 已经预处理过 */
 
+    int fz = 0;
+    int fm = g_nr_l1 * g_nr_l2 + g_nr_l2 * g_nr_l3;
+
+#define magic(beg1,end1,beg2,end2) do\
+                                    {\
+                                        for(int i=(beg1); i<(end1); i++)\
+                                        {\
+                                            for(int j=(beg2); j<(end2); j++)\
+                                            {\
+                                                /* 判断神经元对(i,j)是否符合条件 i:条件神经元 j:决策神经元*/ \
+                                                for(int x1=0; x1<g_nr_m; x1++)\
+                                                {\
+                                                    for(int x2=x1+1;x2<g_nr_m;x2++)\
+                                                    {\
+                                                        if(m_DataRegTable[x1][j] + m_DataRegTable[x2][j] != 0)\
+                                                        {\
+                                                            continue;\
+                                                        }\
+                                                        int k;\
+                                                        for(k=(beg1); k<(end1); k++)\
+                                                        {\
+                                                            if( k != i )\
+                                                            {\
+                                                                if( m_DataRegTable[x1][k] + m_DataRegTable[x2][k] == 0 )\
+                                                                {\
+                                                                    break;\
+                                                                }\
+                                                            }\
+                                                        }\
+                                                        if( k != (end1) )\
+                                                        {\
+                                                            continue; \
+                                                        }\
+                                                        /* 进一步要求 ||U(X1)-U(X2)||=<5, 既求内积小于5 */\
+                                                        double val=0;\
+                                                        for(int i=(beg1); i<(end1) ; i++)\
+                                                        {\
+                                                            val += (m_DataTable[x1][i]-m_DataTable[x2][i])*(m_DataTable[x1][i]-m_DataTable[x2][i]);\
+                                                        }\
+                                                        fz += (val<=5);\
+                                                    }\
+                                                }\
+                                            }\
+                                        }\
+                                    }while(0);
+
+    magic( 0, g_nr_l1, g_nr_l1, g_nr_l1+g_nr_l2 );
+    magic( g_nr_l1, g_nr_l1+g_nr_l2, g_nr_l1+g_nr_l2, g_nr_n );
+
+#undef magic
+
+    ui->lb_cal9_fz->setText(QString::number(fz));
+    ui->lb_cal9_fm->setText(QString::number(fm));
+    ui->lb_cal9_rate->setText(QString::number(fz/(double)fm));
 
     setStatus(" Distance-sign 覆盖率计算完毕");
 }
@@ -290,7 +407,60 @@ void Widget::cal10()
 {
     setStatus("正在计算 Sign-value 覆盖率");
 
+    /* 规则8 已经预处理过 */
 
+    int fz = 0;
+    int fm = g_nr_l1 * g_nr_l2 + g_nr_l2 * g_nr_l3;
+
+#define magic(beg1,end1,beg2,end2) do\
+                                    {\
+                                        for(int i=(beg1); i<(end1); i++)\
+                                        {\
+                                            for(int j=(beg2); j<(end2); j++)\
+                                            {\
+                                                /* 判断神经元对(i,j)是否符合条件 i:条件神经元 j:决策神经元*/ \
+                                                for(int x1=0; x1<g_nr_m; x1++)\
+                                                {\
+                                                    for(int x2=x1+1;x2<g_nr_m;x2++)\
+                                                    {\
+                                                        if(m_DataRegTable[x1][i] + m_DataRegTable[x2][i] != 0)\
+                                                        {\
+                                                            continue;\
+                                                        }\
+                                                        if(m_DataRegTable[x1][j] + m_DataRegTable[x2][j] == 0)\
+                                                        {\
+                                                            continue;\
+                                                        }\
+                                                        if( !(m_DataTable[x1][j]/m_DataTable[x2][j]>2 || m_DataTable[x1][j]/m_DataTable[x2][j]<0.5f) )\
+                                                        {\
+                                                            continue;\
+                                                        }\
+                                                        int k;\
+                                                        for(k=(beg1); k<(end1); k++)\
+                                                        {\
+                                                            if( k != i )\
+                                                            {\
+                                                                if( m_DataRegTable[x1][k] + m_DataRegTable[x2][k] == 0 )\
+                                                                {\
+                                                                    break;\
+                                                                }\
+                                                            }\
+                                                        }\
+                                                        fz += ( k == (end1) );\
+                                                    }\
+                                                }\
+                                            }\
+                                        }\
+                                    }while(0);
+
+    magic( 0, g_nr_l1, g_nr_l1, g_nr_l1+g_nr_l2 );
+    magic( g_nr_l1, g_nr_l1+g_nr_l2, g_nr_l1+g_nr_l2, g_nr_n );
+
+#undef magic
+
+    ui->lb_cal10_fz->setText(QString::number(fz));
+    ui->lb_cal10_fm->setText(QString::number(fm));
+    ui->lb_cal10_rate->setText(QString::number(fz/(double)fm));
 
     setStatus(" Sign-value 覆盖率计算完毕");
 }
@@ -301,7 +471,66 @@ void Widget::cal11()
 {
     setStatus("正在计算 Distance-value 覆盖率");
 
+    /* 规则8 已经预处理过 */
 
+    int fz = 0;
+    int fm = g_nr_l1 * g_nr_l2 + g_nr_l2 * g_nr_l3;
+
+#define magic(beg1,end1,beg2,end2) do\
+                                    {\
+                                        for(int i=(beg1); i<(end1); i++)\
+                                        {\
+                                            for(int j=(beg2); j<(end2); j++)\
+                                            {\
+                                                /* 判断神经元对(i,j)是否符合条件 i:条件神经元 j:决策神经元*/ \
+                                                for(int x1=0; x1<g_nr_m; x1++)\
+                                                {\
+                                                    for(int x2=x1+1;x2<g_nr_m;x2++)\
+                                                    {\
+                                                        if(m_DataRegTable[x1][j] + m_DataRegTable[x2][j] == 0)\
+                                                        {\
+                                                            continue;\
+                                                        }\
+                                                        if( !(m_DataTable[x1][j]/m_DataTable[x2][j]>5 || m_DataTable[x1][j]/m_DataTable[x2][j]<0.2f) )\
+                                                        {\
+                                                            continue;\
+                                                        }\
+                                                        int k;\
+                                                        for(k=(beg1); k<(end1); k++)\
+                                                        {\
+                                                            if( k != i )\
+                                                            {\
+                                                                if( m_DataRegTable[x1][k] + m_DataRegTable[x2][k] == 0 )\
+                                                                {\
+                                                                    break;\
+                                                                }\
+                                                            }\
+                                                        }\
+                                                        if( k != (end1) )\
+                                                        {\
+                                                            continue; \
+                                                        }\
+                                                        /* 进一步要求 ||U(X1)-U(X2)||=<5, 既求内积小于5 */\
+                                                        double val=0;\
+                                                        for(int i=(beg1); i<(end1) ; i++)\
+                                                        {\
+                                                            val += (m_DataTable[x1][i]-m_DataTable[x2][i])*(m_DataTable[x1][i]-m_DataTable[x2][i]);\
+                                                        }\
+                                                        fz += (val<=5);\
+                                                    }\
+                                                }\
+                                            }\
+                                        }\
+                                    }while(0);
+
+    magic( 0, g_nr_l1, g_nr_l1, g_nr_l1+g_nr_l2 );
+    magic( g_nr_l1, g_nr_l1+g_nr_l2, g_nr_l1+g_nr_l2, g_nr_n );
+
+#undef magic
+
+    ui->lb_cal11_fz->setText(QString::number(fz));
+    ui->lb_cal11_fm->setText(QString::number(fm));
+    ui->lb_cal11_rate->setText(QString::number(fz/(double)fm));
 
     setStatus(" Distance-value 覆盖率计算完毕");
 }
