@@ -40,6 +40,10 @@ private slots:
 
     void on_pb_BoundPath_clicked();
 
+    void setStatus(QString status);
+
+    int combine(int nr, int n);
+
 private:
     Ui::Widget *ui;
 
@@ -47,6 +51,7 @@ private:
     QString m_strBoundPath;
     double m_DataTable[ g_nr_m ][ g_nr_n ];
     double m_BoundTable[2][ g_nr_n ]; // 边界值 table[0] 为上界 table[1]为下界
+    int m_DataRegTable[ g_nr_m ][ g_nr_n ]; // 将输入规则为 -1/1
 };
 
 #endif // WIDGET_H
