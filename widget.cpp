@@ -9,6 +9,14 @@
 #include <QDebug>
 
 
+//以下值均为缺省值 真实值由readData修改
+int g_nr_m 	= 50;	// 测试用例数目
+int g_nr_l1	= 50;	// 第一层节点数目
+int g_nr_l2 = 40;	// 第二层节点数目
+int g_nr_l3 = 30;	// 第三层节点数目
+int g_nr_n 	= g_nr_l1 + g_nr_l2 + g_nr_l3;
+
+
 Widget::Widget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::Widget)
@@ -75,7 +83,7 @@ void Widget::cal2()
             if( m_DataTable[j][i] != m_BoundTable[0][i] ) // 处理一般情况
             {
                 int pos = (int)((m_DataTable[j][i]-m_BoundTable[1][i])/l); // 计算对应的位置
-                if( pos<g_N ) // 看了题五 怕有数据超过上边界
+                if( 0<=pos && pos<g_N ) // 数据可能越界
                 {
                     cnt[ pos ]++;
                 }
@@ -448,6 +456,7 @@ void Widget::cal8()
     */
 
     // 预处理
+    m_DataRegTable = m_DataTable; // 简单粗暴的做法 使得m_DataRegTable拥有m_DataTable一样大小的内存
     for(int i=0; i<g_nr_m; i++)
     {
         for(int j=0; j<g_nr_n; j++)
@@ -730,11 +739,11 @@ void Widget::on_pb_DataPath_clicked()
         return;
     }
 
-    memset( m_DataTable, 0, sizeof m_DataTable ); // 清空已有数据
+    m_DataTable.clear(); // 清空已有数据
 
     // 逐行读取数据存入 m_DataTable 中
     QTextStream data(&file);
-    int nr_line = 0;
+    QStringList l1Data, l2Data, l3Data; // 每层的数据字串
     while( !data.atEnd() )
     {
         QString line = data.readLine();
@@ -744,14 +753,25 @@ void Widget::on_pb_DataPath_clicked()
         tmp[2].remove(0,2); // 移除 " ["
         tmp[2].remove( tmp[2].indexOf(']'), 2 ); // 移除 "]]"
 
-        QStringList lineData = tmp[0].split(",") + tmp[1].split(",") + tmp[2].split(",");
+        l1Data = tmp[0].split(",");
+        l2Data = tmp[1].split(",");
+        l3Data = tmp[2].split(",");
+        QStringList lineData = l1Data + l2Data + l3Data;
+        QVector<double> dataLine;
         for( int i=0, n=lineData.length() ; i<n ; i++ )
         {
-            m_DataTable[nr_line][i] = lineData[i].trimmed().toDouble();
+            dataLine.append( lineData[i].trimmed().toDouble() );
         }
 
-        nr_line++;
+        m_DataTable.append( dataLine );
     }
+
+    // 修正相应的值
+    g_nr_l1 = l1Data.size();
+    g_nr_l2 = l2Data.size();
+    g_nr_l3 = l3Data.size();
+    g_nr_n = g_nr_l1 + g_nr_l2 + g_nr_l3;
+    g_nr_m = m_DataTable.size();
 
     file.close();
 
@@ -790,7 +810,6 @@ void Widget::on_pb_BoundPath_clicked()
     }
     ui->lb_BoundPath->setText( m_strBoundPath );
 
-    // 读取data.txt文件内容
     QFile file(m_strBoundPath);
     if( !file.open(QIODevice::ReadOnly | QIODevice::Text) )
     {
@@ -799,11 +818,9 @@ void Widget::on_pb_BoundPath_clicked()
         return;
     }
 
-    memset( m_BoundTable, 0, sizeof m_BoundTable ); // 清空已有数据
+    m_BoundTable.clear(); // 清空已有数据
 
-    // 逐行读取数据存入 m_DataTable 中
     QTextStream data(&file);
-    int nr_line = 0;
     while( !data.atEnd() )
     {
         QString line = data.readLine();
@@ -814,12 +831,13 @@ void Widget::on_pb_BoundPath_clicked()
         tmp[2].remove( tmp[2].indexOf(']'), 2 ); // 移除 "]]"
 
         QStringList lineData = tmp[0].split(",") + tmp[1].split(",") + tmp[2].split(",");
+        QVector<double> dataLine;
         for( int i=0, n=lineData.length() ; i<n ; i++ )
         {
-            m_BoundTable[nr_line][i] = lineData[i].trimmed().toDouble();
+            dataLine.append( lineData[i].trimmed().toDouble() );
         }
 
-        nr_line++;
+        m_BoundTable.append( dataLine );
     }
 
     file.close();
