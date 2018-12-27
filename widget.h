@@ -14,6 +14,7 @@ const int g_nr_l2 	= 40;	// 第二层节点数目
 const int g_nr_l3 	= 30;	// 第三层节点数目
 const int g_nr_n 	= g_nr_l1 + g_nr_l2 + g_nr_l3;
 
+const int g_N = 50; // K段神经元被划分为N份
 
 class Widget : public QWidget
 {

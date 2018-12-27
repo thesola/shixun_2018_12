@@ -4,8 +4,9 @@
 #include <QMessageBox>
 #include <QFile>
 #include <QTextStream>
+#include <QSet>
+#include <QList>
 #include <QDebug>
-
 
 
 Widget::Widget(QWidget *parent) :
@@ -53,28 +54,200 @@ void Widget::cal1()
 // 计算规则 2
 void Widget::cal2()
 {
+    setStatus("正在计算 K段神经元覆盖率 覆盖率");
 
+    /*
+     * 将 max-min 长度分为N段
+     *  每段长L=(max-min)/N
+     *  (x-min)/L 即可算出x在那一段上
+     * 注:区间划分格式为 [)[)...[]
+    */
+
+    int nr_fz = 0;
+
+    for(int i=0; i<g_nr_n ; i++)
+    {
+        double l = (m_BoundTable[0][i] - m_BoundTable[1][i])/g_N;
+        int cnt[g_N] = {0};
+        cnt[g_N-1]++; // 最大值归入最后一份
+        for(int j=0; j<g_nr_m ; j++)
+        {
+            if( m_DataTable[j][i] != m_BoundTable[0][i] ) // 处理一般情况
+            {
+                int pos = (int)((m_DataTable[j][i]-m_BoundTable[1][i])/l); // 计算对应的位置
+                if( pos<g_N ) // 看了题五 怕有数据超过上边界
+                {
+                    cnt[ pos ]++;
+                }
+
+            }
+        }
+        // 统计被记录到的份数
+        for(int j=0; j<g_N ; j++)
+        {
+            nr_fz += ( cnt[j] != 0 );
+        }
+    }
+
+    ui->lb_cal2_fz->setText(QString::number(nr_fz));
+    ui->lb_cal2_N->setText(QString::number(g_N));
+    ui->lb_cal2_rate->setText(QString::number(nr_fz/(double)(g_nr_n*g_N)));
+
+    setStatus(" K段神经元覆盖率 覆盖率计算完毕");
 }
 
 
+// 规则3的 qSort使用的比较函数
+bool lessThanT3(QPair<int,double> &v1, QPair<int,double> &v2 )
+{
+    return v1.second < v2.second;
+}
 // 计算规则 3
 void Widget::cal3()
 {
+    setStatus("正在计算 top-k神经元 覆盖率");
 
+    /* 使用QSet记录曾经活跃的节点数 */
+    /* 使用qSort与QList排序 */
+
+    QSet<int> k1_ids, k2_ids, k3_ids;
+
+    for(int i=0; i<g_nr_m ; i++)
+    {
+#define magic(l_beg,l_end,nr) do \
+                            {\
+                                QList<QPair<int,double> > nodes;\
+                                for(int j=(l_beg); j<(l_end) ; j++) /* 统计所有神经元 */\
+                                {\
+                                    nodes.append( QPair<int,double>(j, m_DataTable[i][j]) );\
+                                }\
+                                qSort( nodes.begin(), nodes.end(), lessThanT3 ); /* 排序 */\
+                                /* 记录活跃的节点 */\
+                                k1_ids.insert( nodes[(nr)-1].first );\
+                                k2_ids.insert( nodes[(nr)-1].first );\
+                                k3_ids.insert( nodes[(nr)-1].first );\
+                                \
+                                k2_ids.insert( nodes[(nr)-2].first );\
+                                k3_ids.insert( nodes[(nr)-2].first );\
+                                \
+                                k3_ids.insert( nodes[(nr)-3].first );\
+                                \
+                            }while(0);
+
+        magic(0, g_nr_l1, g_nr_l1);
+        magic(g_nr_l1,g_nr_l1+g_nr_l2,g_nr_l2);
+        magic(g_nr_l1+g_nr_l2, g_nr_n,g_nr_l3);
+
+#undef magic
+
+    }
+
+#define magic(n) do \
+                    {\
+                        ui->lb_cal3_k##n##_fz->setText(QString::number( k##n##_ids.size() ));\
+                        ui->lb_cal3_k##n##_fm->setText(QString::number( g_nr_n ));\
+                        ui->lb_cal3_k##n##_rate->setText(QString::number( k##n##_ids.size()/(double)g_nr_n ));\
+                    }while(0);
+
+    magic(1);
+    magic(2);
+    magic(3);
+#undef magic
+
+    setStatus(" top-k神经元 覆盖率计算完毕");
 }
 
-
+// 规则4的 qSort使用的比较函数
+bool lessThanT4(QPair<int,double> &v1, QPair<int,double> &v2 )
+{
+    return v1.second < v2.second;
+}
 // 计算规则 4
 void Widget::cal4()
 {
+    setStatus("正在计算 TKNP 覆盖率");
 
+    /* 使用QSet记录曾经活跃的节点数 */
+    /* 使用qSort与QList排序 */
+
+    QSet<QString> k1_ids, k2_ids, k3_ids; // 组合转为字符串存储以符合QSet的使用要求
+
+    for(int i=0; i<g_nr_m ; i++)
+    {
+
+        QString k1_key, k2_key, k3_key; // 待拼接的组合值
+#define magic(l_beg,l_end,nr) do \
+                            {\
+                                QList<QPair<int,double> > nodes;\
+                                for(int j=(l_beg); j<(l_end) ; j++) /* 统计所有神经元 */\
+                                {\
+                                    nodes.append( QPair<int,double>(j, m_DataTable[i][j]) );\
+                                }\
+                                qSort( nodes.begin(), nodes.end(), lessThanT4 ); /* 排序 */\
+                                /* 记录活跃的节点 */\
+                                k1_key += "(" + QString::number( nodes[(nr)-1].first ) + ")" ; \
+                                k2_key += "(" + QString::number( nodes[(nr)-1].first ) + "," + QString::number( nodes[(nr)-2].first ) + ")" ; \
+                                k3_key += "(" + QString::number( nodes[(nr)-1].first ) + "," + QString::number( nodes[(nr)-2].first ) + "," + QString::number( nodes[(nr)-3].first ) + ")"; \
+                                \
+                            }while(0);
+
+        magic(0, g_nr_l1, g_nr_l1);
+        magic(g_nr_l1,g_nr_l1+g_nr_l2,g_nr_l2);
+        magic(g_nr_l1+g_nr_l2, g_nr_n,g_nr_l3);
+
+//        qDebug()<<k1_key;
+//        qDebug()<<k2_key;
+//        qDebug()<<k3_key;
+//        qDebug()<<"";
+
+        k1_ids.insert(k1_key);
+        k2_ids.insert(k2_key);
+        k3_ids.insert(k3_key);
+
+#undef magic
+
+    }
+
+#define magic(n) do \
+                    {\
+                        ui->lb_cal4_k##n##_fz->setText(QString::number( k##n##_ids.size() ));\
+                    }while(0);
+
+    magic(1);
+    magic(2);
+    magic(3);
+#undef magic
+
+
+    setStatus(" TKNP 覆盖率计算完毕");
 }
 
 
 // 计算规则 5
 void Widget::cal5()
 {
+    setStatus("正在计算 边界覆盖率 覆盖率");
 
+    // 统计 n 个神经元中上边界神经元的数量
+    int nr_fz = 0;
+
+    for ( int i=0; i<g_nr_n ; i++ )
+    {
+        for( int j=0; j<g_nr_m ; j++ )
+        {
+            if( m_DataTable[j][i] > m_BoundTable[0][i] )
+            {
+                nr_fz++;
+                break;
+            }
+        }
+    }
+
+    ui->lb_cal5_fz->setText( QString::number(nr_fz) );
+    ui->lb_cal5_fm->setText( QString::number(g_nr_n) );
+    ui->lb_cal5_rate->setText( QString::number( nr_fz/(double)g_nr_n ) );
+
+    setStatus(" 边界覆盖率 覆盖率计算完毕");
 }
 
 
