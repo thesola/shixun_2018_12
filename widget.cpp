@@ -475,9 +475,10 @@ void Widget::cal8()
                                             for(int j=(beg2); j<(end2); j++)\
                                             {\
                                                 /* 判断神经元对(i,j)是否符合条件 i:条件神经元 j:决策神经元*/ \
-                                                for(int x1=0; x1<g_nr_m; x1++)\
+                                                 bool yes=false; \
+                                                for(int x1=0; x1<g_nr_m && !yes; x1++)\
                                                 {\
-                                                    for(int x2=x1+1;x2<g_nr_m;x2++)\
+                                                    for(int x2=x1+1;x2<g_nr_m && !yes;x2++)\
                                                     {\
                                                         if(m_DataRegTable[x1][i] + m_DataRegTable[x2][i] != 0)\
                                                         {\
@@ -498,9 +499,10 @@ void Widget::cal8()
                                                                 }\
                                                             }\
                                                         }\
-                                                        fz += ( k == (end1) );\
+                                                        yes= ( k == (end1) );\
                                                     }\
                                                 }\
+                                               if (yes) fz++;\
                                             }\
                                         }\
                                     }while(0);
@@ -535,9 +537,10 @@ void Widget::cal9()
                                             for(int j=(beg2); j<(end2); j++)\
                                             {\
                                                 /* 判断神经元对(i,j)是否符合条件 i:条件神经元 j:决策神经元*/ \
-                                                for(int x1=0; x1<g_nr_m; x1++)\
+                                                bool yes=false; \
+                                                for(int x1=0; x1<g_nr_m && !yes; x1++)\
                                                 {\
-                                                    for(int x2=x1+1;x2<g_nr_m;x2++)\
+                                                    for(int x2=x1+1;x2<g_nr_m && !yes;x2++)\
                                                     {\
                                                         if(m_DataRegTable[x1][j] + m_DataRegTable[x2][j] != 0)\
                                                         {\
@@ -564,9 +567,10 @@ void Widget::cal9()
                                                         {\
                                                             val += (m_DataTable[x1][i]-m_DataTable[x2][i])*(m_DataTable[x1][i]-m_DataTable[x2][i]);\
                                                         }\
-                                                        fz += (val<=5);\
+                                                        yes=(val<=50); \
                                                     }\
                                                 }\
+                                              if (yes) fz++;\
                                             }\
                                         }\
                                     }while(0);
@@ -601,9 +605,10 @@ void Widget::cal10()
                                             for(int j=(beg2); j<(end2); j++)\
                                             {\
                                                 /* 判断神经元对(i,j)是否符合条件 i:条件神经元 j:决策神经元*/ \
-                                                for(int x1=0; x1<g_nr_m; x1++)\
+                                                 bool yes=false; \
+                                                for(int x1=0; x1<g_nr_m && !yes; x1++)\
                                                 {\
-                                                    for(int x2=x1+1;x2<g_nr_m;x2++)\
+                                                    for(int x2=x1+1;x2<g_nr_m && !yes;x2++)\
                                                     {\
                                                         if(m_DataRegTable[x1][i] + m_DataRegTable[x2][i] != 0)\
                                                         {\
@@ -628,9 +633,10 @@ void Widget::cal10()
                                                                 }\
                                                             }\
                                                         }\
-                                                        fz += ( k == (end1) );\
+                                                        yes= ( k == (end1) );\
                                                     }\
                                                 }\
+                                             if (yes) fz++;\
                                             }\
                                         }\
                                     }while(0);
@@ -665,9 +671,10 @@ void Widget::cal11()
                                             for(int j=(beg2); j<(end2); j++)\
                                             {\
                                                 /* 判断神经元对(i,j)是否符合条件 i:条件神经元 j:决策神经元*/ \
-                                                for(int x1=0; x1<g_nr_m; x1++)\
+                                                 bool yes=false; \
+                                                for(int x1=0; x1<g_nr_m && !yes; x1++)\
                                                 {\
-                                                    for(int x2=x1+1;x2<g_nr_m;x2++)\
+                                                    for(int x2=x1+1;x2<g_nr_m && !yes;x2++)\
                                                     {\
                                                         if(m_DataRegTable[x1][j] + m_DataRegTable[x2][j] == 0)\
                                                         {\
@@ -698,9 +705,10 @@ void Widget::cal11()
                                                         {\
                                                             val += (m_DataTable[x1][i]-m_DataTable[x2][i])*(m_DataTable[x1][i]-m_DataTable[x2][i]);\
                                                         }\
-                                                        fz += (val<=5);\
+                                                        yes=(val<=50); \
                                                     }\
                                                 }\
+                                             if (yes) fz++;\
                                             }\
                                         }\
                                     }while(0);
@@ -721,7 +729,7 @@ void Widget::cal11()
 // 读取 data.txt
 void Widget::on_pb_DataPath_clicked()
 {
-    m_strDataPath = QFileDialog::getOpenFileName(this,"选择Data文件",".","Text file (data.txt)");
+    m_strDataPath = QFileDialog::getOpenFileName(this,"选择Data文件",".","Text file (*.txt)");
     if( m_strDataPath == "" )
     {
         QMessageBox::warning(this, "警告", "未选择Data文件!");
